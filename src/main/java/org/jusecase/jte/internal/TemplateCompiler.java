@@ -337,11 +337,16 @@ public class TemplateCompiler {
             ClassInfo layoutInfo = generateLayout(layoutName, classDefinitions, templateDependencies);
 
             writeIndentation(depth);
-            javaCode.append(layoutInfo.fullName).append(".render(output");
-
-            appendParams(params);
-
-            javaCode.append(", java.util.function.Function<String, java.lang.Runnable> { jteLayoutDefinition ->\n");
+            javaCode.append(layoutInfo.fullName);
+            if (params.contains("=") || params.isEmpty()) {
+                javaCode.append(".render(output=output");
+                appendParams(params);
+                javaCode.append(", jteLayoutDefinitionLookup=java.util.function.Function<String, java.lang.Runnable> { jteLayoutDefinition ->\n");
+            } else{
+                javaCode.append(".render(output");
+                appendParams(params);
+                javaCode.append(", java.util.function.Function<String, java.lang.Runnable> { jteLayoutDefinition ->\n");
+            }
         }
 
         private void appendParams(String params) {
