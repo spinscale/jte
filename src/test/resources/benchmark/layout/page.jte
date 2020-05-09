@@ -1,21 +1,21 @@
 @import org.jusecase.jte.benchmark.Page
 
-@param Page page
+@param page:Page
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    @if (page.getDescription() != null)
-        <meta name="description" content="${page.getDescription()}">
+    @if (page.description != null)
+        <meta name="description" content="${page.description}">
     @endif
-    <title>${page.getTitle()}</title>
+    <title>${page.title}</title>
 </head>
 
 <body>
     <div class="menu">
-        @for (org.jusecase.jte.benchmark.MenuItem menuItem : page.getMenu())
+        @for (menuItem in page.menu)
             <a href="${menuItem.url}">${menuItem.name}</a>
         @endfor
     </div>
@@ -23,7 +23,7 @@
         @render(content)
     </div>
     <div class="footer">
-        This page has ${page.getVisits()} already.
+        This page has ${page.visits} visits already.
     </div>
 </body>
 

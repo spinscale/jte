@@ -4,6 +4,7 @@ import org.jusecase.jte.resolve.ResourceCodeResolver;
 import org.jusecase.jte.TemplateEngine;
 import org.jusecase.jte.output.StringOutput;
 
+import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
 class Benchmark {
@@ -15,7 +16,7 @@ class Benchmark {
     }
 
     Benchmark() {
-        templateEngine = new TemplateEngine(new ResourceCodeResolver("benchmark"));
+        templateEngine = new TemplateEngine(new ResourceCodeResolver("benchmark"), Path.of("kte"));
     }
 
     public void run() {

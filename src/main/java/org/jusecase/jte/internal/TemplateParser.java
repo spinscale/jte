@@ -1,9 +1,7 @@
 package org.jusecase.jte.internal;
 
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Deque;
-import java.util.List;
 
 final class TemplateParser {
     private static final int LAYOUT_DEFINITION_DEPTH = 4;
@@ -114,15 +112,6 @@ final class TemplateParser {
             } else if (currentChar == '(' && currentMode.isJava()) {
                 push(Mode.JavaCode);
             } else if (currentChar == ')' && currentMode.isJava()) {
-                if (currentMode == Mode.JavaCodeParam) {
-                    TagOrLayoutMode previousMode = getPreviousMode(TagOrLayoutMode.class);
-                    extract(templateCode, lastIndex, i, (d, c) -> {
-                        if (c != null && !c.isBlank()) {
-                            previousMode.params.add(c);
-                        }
-                    });
-                }
-
                 pop();
 
                 if (currentMode == Mode.Condition) {
@@ -134,22 +123,14 @@ final class TemplateParser {
                     lastIndex = i + 1;
                     push(Mode.Text);
                 } else if (currentMode instanceof TagMode) {
-                    TagMode tagMode = (TagMode)currentMode;
-                    extract(templateCode, lastIndex, i, (d, c) -> visitor.onTag(d, tagMode.name.toString(), tagMode.params));
+                    TagMode tagMode = (TagMode) currentMode;
+                    extract(templateCode, lastIndex, i, (d, c) -> visitor.onTag(d, tagMode.name.toString(), c));
                     lastIndex = i + 1;
                     pop();
                 } else if (currentMode instanceof LayoutMode) {
-                    LayoutMode layoutMode = (LayoutMode)currentMode;
-                    extract(templateCode, lastIndex, i, (d, c) -> visitor.onLayout(d, layoutMode.name.toString(), layoutMode.params));
+                    LayoutMode layoutMode = (LayoutMode) currentMode;
+                    extract(templateCode, lastIndex, i, (d, c) -> visitor.onLayout(d, layoutMode.name.toString(), c));
                 }
-            } else if (currentChar == ',' && currentMode == Mode.JavaCodeParam) {
-                TagOrLayoutMode previousMode = getPreviousMode(TagOrLayoutMode.class);
-                extract(templateCode, lastIndex, i, (d, c) -> {
-                    if (c != null && !c.isBlank()) {
-                        previousMode.params.add(c);
-                    }
-                });
-                lastIndex = i + 1;
             } else if (previousChar3 == '@' && previousChar2 == 'e' && previousChar1 == 'l' && previousChar0 == 's' && currentChar == 'e' && templateCode.charAt(i + 1) != 'i') {
                 if (currentMode == Mode.Text) {
                     extract(templateCode, lastIndex, i - 4, visitor::onTextPart);
@@ -160,7 +141,7 @@ final class TemplateParser {
 
                 visitor.onConditionElse(depth);
                 push(Mode.Text);
-            } else if(previousChar5 == '@' && previousChar4 == 'e' && previousChar3 == 'l' && previousChar2 == 's' && previousChar1 == 'e' && previousChar0 == 'i' && currentChar == 'f') {
+            } else if (previousChar5 == '@' && previousChar4 == 'e' && previousChar3 == 'l' && previousChar2 == 's' && previousChar1 == 'e' && previousChar0 == 'i' && currentChar == 'f') {
                 if (currentMode == Mode.Text) {
                     extract(templateCode, lastIndex, i - 6, visitor::onTextPart);
                 }
@@ -228,7 +209,7 @@ final class TemplateParser {
             } else if (currentMode == Mode.TagName) {
                 if (currentChar == '(') {
                     pop();
-                    push(Mode.JavaCodeParam);
+                    push(Mode.JavaCode);
                     lastIndex = i + 1;
                 } else if (currentChar != ' ') {
                     getPreviousMode(TagOrLayoutMode.class).name.append(currentChar);
@@ -311,7 +292,7 @@ final class TemplateParser {
         for (Mode mode : stack) {
             if (modeClass.isAssignableFrom(mode.getClass())) {
                 //noinspection unchecked
-                return (T)mode;
+                return (T) mode;
             }
         }
         throw new IllegalStateException("Expected mode of type " + modeClass + " on the stack, but found nothing!");
@@ -338,7 +319,6 @@ final class TemplateParser {
         Mode CodeStatement = new StatelessMode();
         Mode Condition = new StatelessMode();
         Mode JavaCode = new StatelessMode(true);
-        Mode JavaCodeParam = new StatelessMode(true);
         Mode JavaCodeString = new StatelessMode();
         Mode ConditionElse = new StatelessMode();
         Mode ForLoop = new StatelessMode();
@@ -370,7 +350,6 @@ final class TemplateParser {
 
     private static abstract class TagOrLayoutMode implements Mode {
         final StringBuilder name = new StringBuilder();
-        final List<String> params = new ArrayList<>();
 
         @Override
         public boolean isJava() {

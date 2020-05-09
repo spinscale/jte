@@ -37,8 +37,8 @@ public final class ClassDefinition {
         return name.hashCode();
     }
 
-    public String getJavaFileName() {
-        return getName().replace('.', '/') + ".java";
+    public String getKotlinFileName() {
+        return getName().replace('.', '/') + ".kt";
     }
 
     public String getClassFileName() {

@@ -1,5 +1,5 @@
 @import org.jusecase.jte.benchmark.WelcomePage
-@param WelcomePage page
+@param page:WelcomePage
 
 @layout.page(page)
     @define(content)

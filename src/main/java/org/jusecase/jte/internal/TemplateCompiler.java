@@ -1,11 +1,8 @@
 package org.jusecase.jte.internal;
 
 import org.jusecase.jte.CodeResolver;
-import org.jusecase.jte.internal.TagOrLayoutParameterParser.ParamInfo;
 import org.jusecase.jte.output.FileOutput;
 
-import javax.tools.JavaCompiler;
-import javax.tools.ToolProvider;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URL;
@@ -30,7 +27,6 @@ public class TemplateCompiler {
     private final String packageName;
     private final boolean debug = false;
     private final ConcurrentHashMap<String, LinkedHashSet<String>> templateDependencies = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, List<ParamInfo>> paramOrder = new ConcurrentHashMap<>();
 
     public TemplateCompiler(CodeResolver codeResolver, Path classDirectory) {
         this(codeResolver, "org.jusecase.jte", classDirectory);
@@ -43,11 +39,12 @@ public class TemplateCompiler {
     }
 
     public Template<?> compile(String name) {
-        if (classDirectory == null) {
+        /*if (classDirectory == null) {
             return compileInMemory(name);
         } else {
             return loadPrecompiled(name, true);
-        }
+        }*/
+        return loadPrecompiled(name, true);
     }
 
     private Template<?> compileInMemory(String name) {
@@ -94,7 +91,7 @@ public class TemplateCompiler {
         }
 
         for (ClassDefinition classDefinition : classDefinitions) {
-            try (FileOutput fileOutput = new FileOutput(classDirectory.resolve(classDefinition.getJavaFileName()))) {
+            try (FileOutput fileOutput = new FileOutput(classDirectory.resolve(classDefinition.getKotlinFileName()))) {
                 fileOutput.writeSafeContent(classDefinition.getCode());
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
@@ -104,11 +101,13 @@ public class TemplateCompiler {
         String[] files = new String[classDefinitions.size()];
         int i = 0;
         for (ClassDefinition classDefinition : classDefinitions) {
-            files[i++] = classDirectory.resolve(classDefinition.getJavaFileName()).toFile().getAbsolutePath();
+            files[i++] = classDirectory.resolve(classDefinition.getKotlinFileName()).toFile().getAbsolutePath();
         }
 
-        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-        compiler.run(null, null, null, files);
+        //JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+        //compiler.run(null, null, null, files);
+        KotlinCompiler compiler = new KotlinCompiler();
+        compiler.compile(classDirectory, files);
     }
 
     private ClassDefinition generateTemplate(String name, LinkedHashSet<ClassDefinition> classDefinitions) {
@@ -127,13 +126,13 @@ public class TemplateCompiler {
         TemplateParameterParser attributeParser = new TemplateParameterParser();
         attributeParser.parse(templateCode);
 
-        StringBuilder javaCode = new StringBuilder("package " + templateInfo.packageName + ";\n");
+        StringBuilder javaCode = new StringBuilder("package " + templateInfo.packageName + "\n");
         for (String importClass : attributeParser.importClasses) {
-            javaCode.append("import ").append(importClass).append(";\n");
+            javaCode.append("import ").append(importClass).append("\n");
         }
 
-        javaCode.append("public final class ").append(templateInfo.className).append(" implements org.jusecase.jte.internal.Template<").append(attributeParser.className).append("> {\n");
-        javaCode.append("\tpublic void render(").append(attributeParser.className).append(" ").append(attributeParser.instanceName).append(", org.jusecase.jte.TemplateOutput output) {\n");
+        javaCode.append("class ").append(templateInfo.className).append(" : org.jusecase.jte.internal.Template<").append(attributeParser.className).append("> {\n");
+        javaCode.append("\toverride fun render(").append(attributeParser.instanceName).append(":").append(attributeParser.className).append(", output:org.jusecase.jte.TemplateOutput) {\n");
 
         new TemplateParser(TemplateType.Template).parse(attributeParser.lastIndex, templateCode, new CodeGenerator(TemplateType.Template, javaCode, classDefinitions, templateDependencies));
         javaCode.append("\t}\n");
@@ -179,19 +178,18 @@ public class TemplateCompiler {
         TagOrLayoutParameterParser parameterParser = new TagOrLayoutParameterParser();
         int lastIndex = parameterParser.parse(code);
 
-        StringBuilder javaCode = new StringBuilder("package " + classInfo.packageName + ";\n");
+        StringBuilder javaCode = new StringBuilder("package " + classInfo.packageName + "\n");
         for (String importClass : parameterParser.importClasses) {
-            javaCode.append("import ").append(importClass).append(";\n");
+            javaCode.append("import ").append(importClass).append("\n");
         }
 
-        javaCode.append("public final class ").append(classInfo.className).append(" {\n");
-        javaCode.append("\tpublic static void render(org.jusecase.jte.TemplateOutput output");
-        for (ParamInfo parameter : parameterParser.parameters) {
-            javaCode.append(", ").append(parameter.type).append(' ').append(parameter.name);
+        javaCode.append("object ").append(classInfo.className).append(" {\n");
+        javaCode.append("\tfun render(output:org.jusecase.jte.TemplateOutput");
+        for (String parameter : parameterParser.parameters) {
+            javaCode.append(", ").append(parameter);
         }
-        paramOrder.put(name, parameterParser.parameters);
         if (type == TemplateType.Layout) {
-            javaCode.append(", java.util.function.Function<String, Runnable> jteLayoutDefinitionLookup");
+            javaCode.append(", jteLayoutDefinitionLookup: java.util.function.Function<String, Runnable>");
         }
         javaCode.append(") {\n");
 
@@ -217,10 +215,8 @@ public class TemplateCompiler {
         ClassInfo classInfo = new ClassInfo(name, packageName);
         ClassDefinition classDefinition = new ClassDefinition(classInfo.fullName);
 
-        deleteFile(classDirectory.resolve(classDefinition.getJavaFileName()));
+        deleteFile(classDirectory.resolve(classDefinition.getKotlinFileName()));
         deleteFile(classDirectory.resolve(classDefinition.getClassFileName()));
-
-        paramOrder.remove(name);
     }
 
     private void deleteFile(Path file) {
@@ -265,25 +261,25 @@ public class TemplateCompiler {
             writeIndentation(depth);
             javaCode.append("output.writeSafeContent(\"");
             appendEscaped(textPart);
-            javaCode.append("\");\n");
+            javaCode.append("\")\n");
         }
 
         @Override
         public void onCodePart(int depth, String codePart) {
             writeIndentation(depth);
-            javaCode.append("output.writeUnsafe(").append(codePart).append(");\n");
+            javaCode.append("output.writeUnsafe(").append(codePart).append(")\n");
         }
 
         @Override
         public void onSafeCodePart(int depth, String codePart) {
             writeIndentation(depth);
-            javaCode.append("output.writeSafe(").append(codePart).append(");\n");
+            javaCode.append("output.writeSafe(").append(codePart).append(")\n");
         }
 
         @Override
         public void onCodeStatement(int depth, String codePart) {
             writeIndentation(depth);
-            javaCode.append(codePart).append(";\n");
+            javaCode.append(codePart).append("\n");
         }
 
         @Override
@@ -323,7 +319,7 @@ public class TemplateCompiler {
         }
 
         @Override
-        public void onTag(int depth, String name, List<String> params) {
+        public void onTag(int depth, String name, String params) {
             String tagName = TAG_DIRECTORY + name.replace('.', '/') + TAG_EXTENSION;
             ClassInfo tagInfo = generateTag(tagName, classDefinitions, templateDependencies);
 
@@ -331,72 +327,27 @@ public class TemplateCompiler {
 
             javaCode.append(tagInfo.fullName).append(".render(output");
 
-            appendParams(tagName, params);
+            appendParams(params);
             javaCode.append(");\n");
         }
 
         @Override
-        public void onLayout(int depth, String name, List<String> params) {
+        public void onLayout(int depth, String name, String params) {
             String layoutName = LAYOUT_DIRECTORY + name.replace('.', '/') + LAYOUT_EXTENSION;
             ClassInfo layoutInfo = generateLayout(layoutName, classDefinitions, templateDependencies);
 
             writeIndentation(depth);
             javaCode.append(layoutInfo.fullName).append(".render(output");
 
-            appendParams(layoutName, params);
+            appendParams(params);
 
-            javaCode.append(", new java.util.function.Function<String, Runnable>() {\n");
-            writeIndentation(depth + 1);
-            javaCode.append("public Runnable apply(String jteLayoutDefinition) {\n");
+            javaCode.append(", java.util.function.Function<String, java.lang.Runnable> { jteLayoutDefinition ->\n");
         }
 
-        private void appendParams(String name, List<String> params) {
-            List<ParamInfo> paramInfos = paramOrder.get(name);
-            if (paramInfos == null) {
-                throw new IllegalStateException("No parameter information for " + name);
+        private void appendParams(String params) {
+            if (!params.isBlank()) {
+                javaCode.append(", ").append(params);
             }
-
-            if (paramInfos.isEmpty()) {
-                return;
-            }
-
-            int index = 0;
-            ParamCallInfo[] paramCallInfos = new ParamCallInfo[paramInfos.size()];
-            for (String param : params) {
-                ParamCallInfo paramCallInfo = new ParamCallInfo(param);
-                int parameterIndex = getParameterIndex(name, paramInfos, paramCallInfo);
-                if (parameterIndex == -1) {
-                    parameterIndex = index;
-                }
-                paramCallInfos[parameterIndex] = paramCallInfo;
-
-                ++index;
-            }
-
-            for (int i = 0; i < paramCallInfos.length; i++) {
-                ParamCallInfo paramCallInfo = paramCallInfos[i];
-                if (paramCallInfo != null) {
-                    javaCode.append(", ").append(paramCallInfo.data);
-                } else {
-                    ParamInfo paramInfo = paramInfos.get(i);
-                    if (paramInfo.defaultValue != null) {
-                        javaCode.append(", ").append(paramInfo.defaultValue);
-                    }
-                }
-            }
-        }
-
-        private int getParameterIndex(String name, List<ParamInfo> paramInfos, ParamCallInfo paramCallInfo) {
-            if (paramCallInfo.name == null) {
-                return -1;
-            }
-
-            for (int i = 0; i < paramInfos.size(); ++i) {
-                if (paramInfos.get(i).name.equals(paramCallInfo.name)) {
-                    return i;
-                }
-            }
-            throw new IllegalStateException("No parameter with name " + paramCallInfo.name + " is defined in " + name);
         }
 
         @Override
@@ -407,36 +358,30 @@ public class TemplateCompiler {
 
         @Override
         public void onLayoutDefine(int depth, String name) {
+            writeIndentation(depth + 1);
+            javaCode.append("if (\"").append(name.trim()).append("\" == jteLayoutDefinition) {\n");
             writeIndentation(depth + 2);
-            javaCode.append("if (\"").append(name.trim()).append("\".equals(jteLayoutDefinition)) {\n");
-            writeIndentation(depth + 3);
-            javaCode.append("return new Runnable() {\n");
-            writeIndentation(depth + 4);
-            javaCode.append("public void run() {\n");
+            javaCode.append("return@Function java.lang.Runnable {\n");
         }
 
         @Override
         public void onLayoutDefineEnd(int depth) {
-            writeIndentation(depth + 4);
-            javaCode.append("}\n");
-            writeIndentation(depth + 3);
-            javaCode.append("};\n");
             writeIndentation(depth + 2);
+            javaCode.append("}\n");
+            writeIndentation(depth + 1);
             javaCode.append("}\n");
         }
 
         @Override
         public void onLayoutEnd(int depth) {
-            writeIndentation(depth + 2);
-            if (type == TemplateType.Layout) {
-                javaCode.append("return jteLayoutDefinitionLookup.apply(jteLayoutDefinition);\n");
-            } else {
-                javaCode.append("return () -> {};\n");
-            }
             writeIndentation(depth + 1);
-            javaCode.append("}\n");
+            if (type == TemplateType.Layout) {
+                javaCode.append("return@Function jteLayoutDefinitionLookup.apply(jteLayoutDefinition)\n");
+            } else {
+                javaCode.append("return@Function java.lang.Runnable {}\n");
+            }
             writeIndentation(depth);
-            javaCode.append("});\n");
+            javaCode.append("})\n");
         }
 
         @SuppressWarnings("StringRepeatCanBeUsed")
@@ -495,42 +440,6 @@ public class TemplateCompiler {
                 packageName = parentPackage + "." + name.substring(0, startIndex - 1).replace('/', '.');
             }
             fullName = packageName + "." + className;
-        }
-    }
-
-    private static final class ParamCallInfo {
-        final String name;
-        final String data;
-
-        public ParamCallInfo(String param) {
-            param = param.trim();
-
-            int nameEndIndex = -1;
-            int dataStartIndex = -1;
-
-            for (int i = 0; i < param.length(); ++i) {
-                char character = param.charAt(i);
-                if (nameEndIndex == -1) {
-                    if (character == '"' || character == '\'') {
-                        break;
-                    }
-                    if (character == ':') {
-                        nameEndIndex = i;
-                    }
-                } else if (dataStartIndex == -1) {
-                    if (!Character.isWhitespace(character)) {
-                        dataStartIndex = i;
-                    }
-                }
-            }
-
-            if (nameEndIndex != -1 && dataStartIndex != -1) {
-                name = param.substring(0, nameEndIndex);
-                data = param.substring(dataStartIndex);
-            } else {
-                name = null;
-                data = param;
-            }
         }
     }
 }

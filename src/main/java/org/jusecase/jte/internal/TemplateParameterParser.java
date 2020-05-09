@@ -19,9 +19,9 @@ final class TemplateParameterParser {
 
             @Override
             public void onParameter(String parameter) {
-                String[] params = parameter.split(" ");
-                className = params[0];
-                instanceName = params[1];
+                String[] params = parameter.split(":");
+                className = params[1];
+                instanceName = params[0];
             }
         }).parse();
     }
