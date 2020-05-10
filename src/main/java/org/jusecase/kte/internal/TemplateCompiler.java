@@ -39,27 +39,7 @@ public class TemplateCompiler {
     }
 
     public Template<?> compile(String name) {
-        /*if (classDirectory == null) {
-            return compileInMemory(name);
-        } else {
-            return loadPrecompiled(name, true);
-        }*/
         return loadPrecompiled(name, true);
-    }
-
-    private Template<?> compileInMemory(String name) {
-        LinkedHashSet<ClassDefinition> classDefinitions = new LinkedHashSet<>();
-        ClassDefinition templateDefinition = generateTemplate(name, classDefinitions);
-        if (templateDefinition == null) {
-            return EmptyTemplate.INSTANCE;
-        }
-
-        try {
-            ClassCompiler classCompiler = new ClassCompiler();
-            return (Template<?>) classCompiler.compile(templateDefinition.getName(), classDefinitions).getConstructor().newInstance();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
     }
 
     private Template<?> loadPrecompiled(String name, boolean firstAttempt) {
@@ -104,19 +84,17 @@ public class TemplateCompiler {
             files[i++] = classDirectory.resolve(classDefinition.getKotlinFileName()).toFile().getAbsolutePath();
         }
 
-        //JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-        //compiler.run(null, null, null, files);
         KotlinCompiler compiler = new KotlinCompiler();
         compiler.compile(classDirectory, files);
     }
 
-    private ClassDefinition generateTemplate(String name, LinkedHashSet<ClassDefinition> classDefinitions) {
+    private void generateTemplate(String name, LinkedHashSet<ClassDefinition> classDefinitions) {
         String templateCode = codeResolver.resolve(name);
         if (templateCode == null) {
             throw new RuntimeException("No code found for template " + name);
         }
         if (templateCode.isEmpty()) {
-            return null;
+            return;
         }
 
         LinkedHashSet<String> templateDependencies = new LinkedHashSet<>();
@@ -147,8 +125,6 @@ public class TemplateCompiler {
         if (debug) {
             System.out.println(templateDefinition.getCode());
         }
-
-        return templateDefinition;
     }
 
     private ClassInfo generateTag(String name, LinkedHashSet<ClassDefinition> classDefinitions, LinkedHashSet<String> templateDependencies) {

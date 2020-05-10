@@ -6,6 +6,7 @@ import org.jusecase.kte.internal.TemplateCompiler;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -14,11 +15,9 @@ public final class TemplateEngine {
     private final TemplateCompiler compiler;
     private final ConcurrentMap<String, Template> templateCache;
 
-    public TemplateEngine(CodeResolver codeResolver) {
-        this(codeResolver, null);
-    }
-
     public TemplateEngine(CodeResolver codeResolver, Path classDirectory) {
+        Objects.requireNonNull(classDirectory, "A directory for generated classes needs to be specified!");
+
         compiler = new TemplateCompiler(codeResolver, classDirectory);
         templateCache = new ConcurrentHashMap<>();
     }
