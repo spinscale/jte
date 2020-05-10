@@ -5,12 +5,12 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.jusecase</groupId>
-    <artifactId>java-template-engine</artifactId>
+    <artifactId>kotlin-template-engine</artifactId>
     <version>0.0.1</version>
     <packaging>jar</packaging>
 
-    <name>Java Template Engine</name>
-    <description>A template engine using native java code.</description>
+    <name>Kotlin Template Engine</name>
+    <description>A template engine using native Kotlin code.</description>
     <url>http://jusecase.org</url>
     <developers>
         <developer>

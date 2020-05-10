@@ -1,0 +1,47 @@
+package org.jusecase.kte.benchmark;
+
+import org.jusecase.kte.resolve.ResourceCodeResolver;
+import org.jusecase.kte.TemplateEngine;
+import org.jusecase.kte.output.StringOutput;
+
+import java.nio.file.Path;
+import java.util.concurrent.TimeUnit;
+
+class Benchmark {
+
+    private final TemplateEngine templateEngine;
+
+    public static void main(String[] args) {
+        new Benchmark().run();
+    }
+
+    Benchmark() {
+        templateEngine = new TemplateEngine(new ResourceCodeResolver("benchmark"), Path.of("kte"));
+    }
+
+    public void run() {
+        System.out.println("Rendering welcome page for the first time, this will cause the template to compile.");
+        renderWelcomePage(1);
+
+        System.out.println("Rendering welcome page a million times.");
+        renderWelcomePage(1_000_000);
+    }
+
+    private void renderWelcomePage(int amount) {
+        long start = System.nanoTime();
+
+        for (int i = 0; i < amount; ++i) {
+            Page page = new WelcomePage(i);
+            render(page);
+        }
+
+        long end = System.nanoTime();
+
+        System.out.println(amount + " pages rendered in " + TimeUnit.NANOSECONDS.toMillis(end - start) + "ms." + " (~ " + ((float)TimeUnit.NANOSECONDS.toMicros(end - start) / amount) + "µs per page)");
+        System.out.println();
+    }
+
+    private void render(Page page) {
+        templateEngine.render(page.getTemplate(), page, new StringOutput());
+    }
+}

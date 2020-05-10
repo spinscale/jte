@@ -1,0 +1,30 @@
+@import org.jusecase.kte.benchmark.Page
+
+@param page:Page
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    @if (page.description != null)
+        <meta name="description" content="${page.description}">
+    @endif
+    <title>${page.title}</title>
+</head>
+
+<body>
+    <div class="menu">
+        @for (menuItem in page.menu)
+            <a href="${menuItem.url}">${menuItem.name}</a>
+        @endfor
+    </div>
+    <div class="content">
+        @render(content)
+    </div>
+    <div class="footer">
+        This page has ${page.visits} visits already.
+    </div>
+</body>
+
+</html>
