@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -191,15 +192,17 @@ public class TemplateCompiler {
         ClassInfo classInfo = new ClassInfo(name, packageName);
         ClassDefinition classDefinition = new ClassDefinition(classInfo.fullName);
 
-        deleteFile(classDirectory.resolve(classDefinition.getKotlinFileName()));
-        deleteFile(classDirectory.resolve(classDefinition.getClassFileName()));
-    }
+        IoUtils.deleteFile(classDirectory.resolve(classDefinition.getKotlinFileName()));
 
-    private void deleteFile(Path file) {
-        try {
-            Files.deleteIfExists(file);
+        Path classFile = classDirectory.resolve(classDefinition.getClassFileName());
+        IoUtils.deleteFile(classFile);
+
+        try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(classFile.getParent(), IoUtils.removeExtension(classFile.getFileName().toString()) + "$*")) {
+            for (Path file : directoryStream) {
+                Files.delete(file);
+            }
         } catch (IOException e) {
-            throw new UncheckedIOException("Failed to delete file " + file, e);
+            throw new UncheckedIOException("Failed to delete class files for " + classFile, e);
         }
     }
 
