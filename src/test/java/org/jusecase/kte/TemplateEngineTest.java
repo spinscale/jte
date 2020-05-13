@@ -309,6 +309,14 @@ public class TemplateEngineTest {
     }
 
     @Test
+    void tagWithTemplateString() {
+        givenTag("card", "@param content:String\n" +
+                "<content>${content}</content>");
+        givenTemplate("<span>@tag.card(\"<b>Model</b> says ${model.hello}, ${model.anotherWorld}!\")</span>");
+        thenOutputIs("<span><content><b>Model</b> says Hello, Another World!</content></span>");
+    }
+
+    @Test
     void hotReload() {
         givenTemplate("${model.hello} World");
         thenOutputIs("Hello World");

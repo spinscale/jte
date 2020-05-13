@@ -55,10 +55,8 @@ final class TemplateParser {
                     pop();
                     lastIndex = i + 1;
                 }
-            } else if (previousChar0 == '$' && currentChar == '{') {
-                if (currentMode == Mode.Text) {
-                    extract(templateCode, lastIndex, i - 1, visitor::onTextPart);
-                }
+            } else if (previousChar0 == '$' && currentChar == '{' && currentMode == Mode.Text) {
+                extract(templateCode, lastIndex, i - 1, visitor::onTextPart);
                 lastIndex = i + 1;
                 push(Mode.Code);
             } else if (previousChar4 == '$' && previousChar3 == 's' && previousChar2 == 'a' && previousChar1 == 'f' && previousChar0 == 'e' && currentChar == '{') {
