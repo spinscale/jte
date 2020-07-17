@@ -10,7 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 public class BenchmarkTest {
     @Test
-    void name() {
+    public void name() {
         StringOutput output = new Benchmark().render(new WelcomePage(42));
 
         assertThat(output.toString()).contains("This page has 42 visits already.");

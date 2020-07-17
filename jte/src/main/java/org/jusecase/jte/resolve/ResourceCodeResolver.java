@@ -1,7 +1,7 @@
 package org.jusecase.jte.resolve;
 
 import org.jusecase.jte.CodeResolver;
-import org.jusecase.jte.internal.IoUtils;
+import org.jusecase.jte.compile.IoUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
