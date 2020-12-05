@@ -20,6 +20,7 @@ class Benchmark {
     Benchmark() {
         templateEngine = TemplateEngine.create(new ResourceCodeResolver("benchmark"), ContentType.Html);
         templateEngine.setTrimControlStructures(true);
+        templateEngine.setNullSafeTemplateCode(true); // Run with -XX:-OmitStackTraceInFastThrow
     }
 
     public void run() {

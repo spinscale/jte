@@ -28,4 +28,8 @@ public abstract class Page {
     public int getVisits() {
         return visits;
     }
+
+    public MenuItem getNullMenu() {
+        return null;
+    }
 }

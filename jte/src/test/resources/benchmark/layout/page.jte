@@ -24,6 +24,8 @@
     <div class="content">
         <h1>${page.getTitle()}</h1>
         ${content}
+
+        ${page.getNullMenu().name}
     </div>
     <div class="footer">
         This page has ${page.getVisits()} visits already.
